@@ -20,36 +20,48 @@ export default function OCRTemplate() {
   const handleOCR = async () => {
     if (!selectedFile) return;
     setLoading(true);
+
     const {
-      data: { text }
+      data: { text },
     } = await Tesseract.recognize(selectedFile, "eng", {
-      logger: (m) => console.log(m)
+      logger: (m) => console.log(m),
     });
 
-    setOcrText(text);
+    // Clean the OCR text
+    const cleanedText = text.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
+    setOcrText(cleanedText);
 
-    // Save to Firestore
-    const docRef = await addDoc(collection(db, "documents"), {
-      title: selectedFile.name,
-      content: text,
-      status: "Awaiting Signature",
-      createdAt: serverTimestamp()
-    });
-
-    // Ask AI to summarize full content
+    // Generate summary with OpenAI
     const aiSummary = await askAI(
-      `Summarize this document clearly in one paragraph:\n\n${text}`
+      `Summarize this document clearly in one paragraph:\n\n${cleanedText}`
     );
     setSummary(aiSummary);
+
+    // Save everything to Firestore
+    await addDoc(collection(db, "documents"), {
+      title: selectedFile.name,
+      content: cleanedText,
+      summary: aiSummary,
+      status: "Awaiting Signature",
+      createdAt: serverTimestamp(),
+    });
+
     setLoading(false);
   };
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h2 className="text-3xl font-bold mb-4">OCR Template</h2>
-      <p className="mb-4">Upload an image to extract text and auto-summarize it using AI.</p>
+      <p className="mb-4">
+        Upload an image to extract text and auto-summarize it using AI.
+      </p>
 
-      <input type="file" accept="image/*" onChange={handleImageUpload} className="mb-4" />
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="mb-4"
+      />
       <button
         onClick={handleOCR}
         disabled={loading || !selectedFile}

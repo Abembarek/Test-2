@@ -1,3 +1,4 @@
+import { askAI } from "./AIHelper";
 import React, { useEffect, useState } from "react";
 import {
   collection,
@@ -14,10 +15,19 @@ export default function Documents() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const documentsRef = collection(db, "documents");
+  const [summaries, setSummaries] = useState({});
+  const [summarizingId, setSummarizingId] = useState(null);
 
   useEffect(() => {
     refreshDocuments();
   }, []);
+  async function summarizeDocument(id, title) {
+    setSummarizingId(id);
+    const prompt = `Summarize what this document titled "${title}" is likely about. Be clear and concise.`;
+    const summary = await askAI(prompt);
+    setSummaries((prev) => ({ ...prev, [id]: summary }));
+    setSummarizingId(null);
+  }
 
   async function refreshDocuments() {
     const snapshot = await getDocs(documentsRef);
@@ -87,6 +97,20 @@ export default function Documents() {
                 </span>
               </div>
               <div className="space-x-2">
+                <button
+                  className="text-purple-600 hover:underline"
+                  onClick={() => summarizeDocument(docItem.id, docItem.title)}
+                >
+                  {summarizingId === docItem.id
+                    ? "Summarizing..."
+                    : "🧠 Summarize"}
+                </button>
+                {summaries[docItem.id] && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    <strong>Summary:</strong> {summaries[docItem.id]}
+                  </p>
+                )}
+
                 <button
                   className="text-green-600 hover:underline"
                   onClick={() => toggleSignature(docItem.id, docItem.status)}

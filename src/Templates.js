@@ -42,6 +42,39 @@ export default function Templates() {
     }));
     setTemplates(docs);
   }
+  // Edit template title
+  async function editTemplate(id, currentTitle) {
+    const newTitle = prompt("Edit template name:", currentTitle);
+    if (!newTitle || newTitle === currentTitle) return;
+
+    await setDoc(doc(db, "templates", id), {
+      title: newTitle,
+      updatedAt: serverTimestamp(),
+    });
+
+    refreshTemplates();
+  }
+
+  // Delete template
+  async function deleteTemplate(id) {
+    const confirmDelete = confirm(
+      "Are you sure you want to delete this template?"
+    );
+    if (!confirmDelete) return;
+
+    await deleteDoc(doc(db, "templates", id));
+    refreshTemplates();
+  }
+
+  // Refresh templates after add/edit/delete
+  async function refreshTemplates() {
+    const snapshot = await getDocs(templatesRef);
+    const docs = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setTemplates(docs);
+  }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -55,10 +88,33 @@ export default function Templates() {
       ) : templates.length === 0 ? (
         <p>No templates yet.</p>
       ) : (
-        <ul className="mb-4">
+        <ul className="mb-4 space-y-2">
           {templates.map((template) => (
-            <li key={template.id} className="mb-2">
-              <strong>{template.title}</strong> ReuseEdit
+            <li
+              key={template.id}
+              className="flex justify-between items-center border p-2 rounded"
+            >
+              <strong>{template.title}</strong>
+              <div className="space-x-2">
+                <button
+                  className="text-blue-600 hover:underline"
+                  onClick={() => alert(`Reuse "${template.title}"`)}
+                >
+                  Reuse
+                </button>
+                <button
+                  className="text-yellow-600 hover:underline"
+                  onClick={() => editTemplate(template.id, template.title)}
+                >
+                  Edit
+                </button>
+                <button
+                  className="text-red-600 hover:underline"
+                  onClick={() => deleteTemplate(template.id)}
+                >
+                  Delete
+                </button>
+              </div>
             </li>
           ))}
         </ul>

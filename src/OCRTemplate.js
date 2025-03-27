@@ -1,63 +1,74 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import Tesseract from "tesseract.js";
-import { askAI } from "./AIHelper.js";
+import { db } from "./firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { askAI } from "./AIHelper";
 
 export default function OCRTemplate() {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [template, setTemplate] = useState("");
+  const [ocrText, setOcrText] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [summary, setSummary] = useState("");
 
-  async function handleOCR() {
-    if (!selectedFile) {
-      setError("Please select a file.");
-      return;
-    }
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    setSelectedFile(file);
+    setOcrText("");
+    setSummary("");
+  };
+
+  const handleOCR = async () => {
+    if (!selectedFile) return;
     setLoading(true);
-    setError("");
+    const {
+      data: { text }
+    } = await Tesseract.recognize(selectedFile, "eng", {
+      logger: (m) => console.log(m)
+    });
 
-    try {
-      const {
-        data: { text },
-      } = await Tesseract.recognize(selectedFile, "eng");
-      const prompt = `
-        Create a structured form template from this text.
-        Identify form fields clearly:
+    setOcrText(text);
 
-        "${text}"
-      `;
-      const aiGeneratedTemplate = await askAI(prompt);
-      setTemplate(aiGeneratedTemplate);
-    } catch (e) {
-      setError(`Error: ${e.message}`);
-    }
+    // Save to Firestore
+    const docRef = await addDoc(collection(db, "documents"), {
+      title: selectedFile.name,
+      content: text,
+      status: "Awaiting Signature",
+      createdAt: serverTimestamp()
+    });
+
+    // Ask AI to summarize full content
+    const aiSummary = await askAI(
+      `Summarize this document clearly in one paragraph:\n\n${text}`
+    );
+    setSummary(aiSummary);
     setLoading(false);
-  }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h2 className="text-3xl font-bold mb-4">AI-Generated Template</h2>
+    <div className="p-6 max-w-3xl mx-auto">
+      <h2 className="text-3xl font-bold mb-4">OCR Template</h2>
+      <p className="mb-4">Upload an image to extract text and auto-summarize it using AI.</p>
 
-      <input
-        className="block w-full"
-        type="file"
-        onChange={(e) => setSelectedFile(e.target.files[0])}
-      />
-
+      <input type="file" accept="image/*" onChange={handleImageUpload} className="mb-4" />
       <button
-        className="mt-4 bg-green-600 text-white py-2 px-4 rounded"
         onClick={handleOCR}
+        disabled={loading || !selectedFile}
+        className="bg-blue-600 text-white py-2 px-4 rounded disabled:opacity-50"
       >
-        Generate Template
+        {loading ? "Processing..." : "Extract & Summarize"}
       </button>
 
-      {loading && <p className="mt-4">Generating...</p>}
-      {error && <p className="mt-4 text-red-500">{error}</p>}
+      {ocrText && (
+        <div className="mt-4">
+          <h3 className="font-semibold">Extracted Text:</h3>
+          <pre className="bg-gray-100 p-2 text-sm rounded">{ocrText}</pre>
+        </div>
+      )}
 
-      {template && (
-        <div className="mt-6 bg-gray-100 p-4 rounded whitespace-pre-wrap">
-          <strong>Template:</strong>
-          <pre>{template}</pre>
+      {summary && (
+        <div className="mt-4">
+          <h3 className="font-semibold">AI Summary:</h3>
+          <p className="text-sm text-gray-700">{summary}</p>
         </div>
       )}
     </div>

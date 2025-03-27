@@ -91,10 +91,14 @@ export default function Documents() {
               className="flex justify-between items-center border p-2 rounded"
             >
               <div>
-                <strong>{docItem.title}</strong>{" "}
-                <span className="text-sm text-gray-500">
-                  ({docItem.status})
-                </span>
+                {summaries[docItem.id] || docItem.content ? (
+                  <p className="mt-2 text-sm text-gray-600">
+                    <strong>Summary:</strong>{" "}
+                    {summaries[docItem.id] ||
+                      (docItem.content &&
+                        docItem.content.slice(0, 300) + "...")}
+                  </p>
+                ) : null}
               </div>
               <div className="space-x-2">
                 <button

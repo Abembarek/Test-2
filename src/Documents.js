@@ -42,10 +42,13 @@ export default function Documents() {
     refreshDocuments();
   }
 
-  async function markSigned(id) {
+  async function toggleSignature(id, currentStatus) {
+    const newStatus =
+      currentStatus === "Signed ✓" ? "Awaiting Signature" : "Signed ✓";
+
     await updateDoc(doc(db, "documents", id), {
-      status: "Signed ✓",
-      signedAt: serverTimestamp(),
+      status: newStatus,
+      updatedAt: serverTimestamp(),
     });
 
     refreshDocuments();
@@ -84,14 +87,12 @@ export default function Documents() {
                 </span>
               </div>
               <div className="space-x-2">
-                {docItem.status !== "Signed ✓" && (
-                  <button
-                    className="text-green-600 hover:underline"
-                    onClick={() => markSigned(docItem.id)}
-                  >
-                    Mark Signed
-                  </button>
-                )}
+                <button
+                  className="text-green-600 hover:underline"
+                  onClick={() => toggleSignature(docItem.id, docItem.status)}
+                >
+                  {docItem.status === "Signed ✓" ? "Unsign" : "Mark Signed"}
+                </button>
                 <button
                   className="text-blue-600 hover:underline"
                   onClick={() => alert("Download feature coming soon!")}

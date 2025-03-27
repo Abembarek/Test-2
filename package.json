@@ -13,6 +13,7 @@
     "tesseract.js": "6.0.0",
     "camtel-design": "1.0.0",
     "ajv": "8.17.1"
+    ,"firebase": "^10.7.1"
   },
   "devDependencies": {
     "@types/react": "19.0.0",

@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react";
-import { db } from "./firebase";
+import React, { useEffect, useState } from "react";
 import {
   collection,
   getDocs,
   addDoc,
   serverTimestamp,
+  setDoc,
+  doc,
+  deleteDoc,
 } from "firebase/firestore";
+import { db } from "./firebase";
 
 export default function Templates() {
   const [templates, setTemplates] = useState([]);
@@ -14,17 +17,18 @@ export default function Templates() {
   const templatesRef = collection(db, "templates");
 
   useEffect(() => {
-    async function fetchTemplates() {
-      const snapshot = await getDocs(templatesRef);
-      const docs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setTemplates(docs);
-      setLoading(false);
-    }
-    fetchTemplates();
+    refreshTemplates();
   }, []);
+
+  async function refreshTemplates() {
+    const snapshot = await getDocs(templatesRef);
+    const docs = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setTemplates(docs);
+    setLoading(false);
+  }
 
   async function createTemplate() {
     const title = prompt("Enter template name:");
@@ -35,19 +39,15 @@ export default function Templates() {
       createdAt: serverTimestamp(),
     });
 
-    const snapshot = await getDocs(templatesRef);
-    const docs = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setTemplates(docs);
+    refreshTemplates();
   }
-  // Edit template title
+
   async function editTemplate(id, currentTitle) {
     const newTitle = prompt("Edit template name:", currentTitle);
     if (!newTitle || newTitle === currentTitle) return;
 
-    await setDoc(doc(db, "templates", id), {
+    const docRef = doc(db, "templates", id);
+    await setDoc(docRef, {
       title: newTitle,
       updatedAt: serverTimestamp(),
     });
@@ -55,25 +55,20 @@ export default function Templates() {
     refreshTemplates();
   }
 
-  // Delete template
   async function deleteTemplate(id) {
     const confirmDelete = confirm(
       "Are you sure you want to delete this template?"
     );
     if (!confirmDelete) return;
 
-    await deleteDoc(doc(db, "templates", id));
+    const docRef = doc(db, "templates", id);
+    await deleteDoc(docRef);
     refreshTemplates();
   }
 
-  // Refresh templates after add/edit/delete
-  async function refreshTemplates() {
-    const snapshot = await getDocs(templatesRef);
-    const docs = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setTemplates(docs);
+  function reuseTemplate(title) {
+    alert(`Reusing template: ${title}`);
+    // In the future: load this template into a document creation screen
   }
 
   return (
@@ -98,7 +93,7 @@ export default function Templates() {
               <div className="space-x-2">
                 <button
                   className="text-blue-600 hover:underline"
-                  onClick={() => alert(`Reuse "${template.title}"`)}
+                  onClick={() => reuseTemplate(template.title)}
                 >
                   Reuse
                 </button>

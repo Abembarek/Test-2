@@ -1,22 +1,121 @@
+import React, { useEffect, useState } from "react";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "./firebase";
+
 export default function Documents() {
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const documentsRef = collection(db, "documents");
+
+  useEffect(() => {
+    refreshDocuments();
+  }, []);
+
+  async function refreshDocuments() {
+    const snapshot = await getDocs(documentsRef);
+    const docs = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setDocuments(docs);
+    setLoading(false);
+  }
+
+  async function uploadDocument() {
+    const title = prompt("Enter document title:");
+    if (!title) return;
+
+    await addDoc(documentsRef, {
+      title,
+      status: "Awaiting Signature",
+      createdAt: serverTimestamp(),
+    });
+
+    refreshDocuments();
+  }
+
+  async function markSigned(id) {
+    await updateDoc(doc(db, "documents", id), {
+      status: "Signed ✓",
+      signedAt: serverTimestamp(),
+    });
+
+    refreshDocuments();
+  }
+
+  async function archiveDocument(id) {
+    const confirmDelete = confirm("Archive this document?");
+    if (!confirmDelete) return;
+
+    await deleteDoc(doc(db, "documents", id));
+    refreshDocuments();
+  }
+
   return (
-    <div style={{ padding: "2rem" }}>
-      <h2>Documents</h2>
-      <p>Manage your documents awaiting signature or review completed ones.</p>
+    <div className="p-6 max-w-3xl mx-auto">
+      <h2 className="text-3xl font-bold mb-4">Documents</h2>
+      <p className="mb-4">
+        Manage your documents awaiting signature or review completed ones.
+      </p>
 
-      <ul>
-        <li>
-          <strong>Freelance Contract</strong> (Awaiting Signature){" "}
-          <button>Remind</button>
-        </li>
-        <li>
-          <strong>HR Onboarding Form</strong> (Signed ✓){" "}
-          <button>Download</button>
-          <button>Archive</button>
-        </li>
-      </ul>
+      {loading ? (
+        <p>Loading documents...</p>
+      ) : documents.length === 0 ? (
+        <p>No documents uploaded yet.</p>
+      ) : (
+        <ul className="mb-4 space-y-2">
+          {documents.map((docItem) => (
+            <li
+              key={docItem.id}
+              className="flex justify-between items-center border p-2 rounded"
+            >
+              <div>
+                <strong>{docItem.title}</strong>{" "}
+                <span className="text-sm text-gray-500">
+                  ({docItem.status})
+                </span>
+              </div>
+              <div className="space-x-2">
+                {docItem.status !== "Signed ✓" && (
+                  <button
+                    className="text-green-600 hover:underline"
+                    onClick={() => markSigned(docItem.id)}
+                  >
+                    Mark Signed
+                  </button>
+                )}
+                <button
+                  className="text-blue-600 hover:underline"
+                  onClick={() => alert("Download feature coming soon!")}
+                >
+                  Download
+                </button>
+                <button
+                  className="text-red-600 hover:underline"
+                  onClick={() => archiveDocument(docItem.id)}
+                >
+                  Archive
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      <button style={{ marginTop: "1rem" }}>+ Upload New Document</button>
+      <button
+        onClick={uploadDocument}
+        className="mt-4 bg-blue-600 text-white py-2 px-4 rounded"
+      >
+        + Upload New Document
+      </button>
     </div>
   );
 }

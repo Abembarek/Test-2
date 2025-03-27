@@ -17,15 +17,21 @@ export default function Documents() {
   const documentsRef = collection(db, "documents");
   const [summaries, setSummaries] = useState({});
   const [summarizingId, setSummarizingId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editedSummary, setEditedSummary] = useState("");
 
   useEffect(() => {
     refreshDocuments();
   }, []);
+
   async function summarizeDocument(id, title) {
     setSummarizingId(id);
     const prompt = `Summarize what this document titled "${title}" is likely about. Be clear and concise.`;
     const summary = await askAI(prompt);
     setSummaries((prev) => ({ ...prev, [id]: summary }));
+
+    const docRef = doc(db, "documents", id);
+    await updateDoc(docRef, { summary });
     setSummarizingId(null);
   }
 
@@ -72,6 +78,17 @@ export default function Documents() {
     refreshDocuments();
   }
 
+  async function handleSaveSummary(id) {
+    try {
+      const docRef = doc(db, "documents", id);
+      await updateDoc(docRef, { summary: editedSummary });
+      setEditingId(null);
+      refreshDocuments();
+    } catch (error) {
+      console.error("Error saving summary:", error);
+    }
+  }
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h2 className="text-3xl font-bold mb-4">Documents</h2>
@@ -90,14 +107,49 @@ export default function Documents() {
               key={docItem.id}
               className="flex justify-between items-center border p-2 rounded"
             >
-              <div>
-                {docItem.summary && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    <strong>Summary:</strong> {docItem.summary}
-                  </p>
+              <div className="flex-1 pr-4">
+                {editingId === docItem.id ? (
+                  <div className="mt-2">
+                    <textarea
+                      value={editedSummary}
+                      onChange={(e) => setEditedSummary(e.target.value)}
+                      className="w-full p-2 border rounded text-sm"
+                      rows={4}
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => handleSaveSummary(docItem.id)}
+                        className="bg-green-600 text-white px-3 py-1 rounded text-sm"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="bg-gray-300 px-3 py-1 rounded text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  docItem.summary && (
+                    <div className="mt-2 text-sm text-gray-700">
+                      <strong>Summary:</strong> {docItem.summary}
+                      <button
+                        onClick={() => {
+                          setEditedSummary(docItem.summary);
+                          setEditingId(docItem.id);
+                        }}
+                        className="text-blue-600 text-xs ml-2 underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  )
                 )}
               </div>
-              <div className="space-x-2">
+
+              <div className="space-x-2 whitespace-nowrap">
                 <button
                   className="text-purple-600 hover:underline"
                   onClick={() => summarizeDocument(docItem.id, docItem.title)}
@@ -106,12 +158,6 @@ export default function Documents() {
                     ? "Summarizing..."
                     : "🧠 Summarize"}
                 </button>
-                {summaries[docItem.id] && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    <strong>Summary:</strong> {summaries[docItem.id]}
-                  </p>
-                )}
-
                 <button
                   className="text-green-600 hover:underline"
                   onClick={() => toggleSignature(docItem.id, docItem.status)}

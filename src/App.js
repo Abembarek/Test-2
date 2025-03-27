@@ -1,3 +1,4 @@
+import TemplatePreview from "./TemplatePreview";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Dashboard from "./Dashboard.js";
 import Templates from "./Templates.js";
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/templates" element={<Templates />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/ocr" element={<OCRTemplate />} />
+        <Route path="/template/:id" element={<TemplatePreview />} />
       </Routes>
     </Router>
   );

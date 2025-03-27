@@ -9,6 +9,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { Link } from "react-router-dom";
 
 export default function Templates() {
   const [templates, setTemplates] = useState([]);
@@ -37,6 +38,7 @@ export default function Templates() {
     await addDoc(templatesRef, {
       title,
       createdAt: serverTimestamp(),
+      fields: [],
     });
 
     refreshTemplates();
@@ -47,10 +49,14 @@ export default function Templates() {
     if (!newTitle || newTitle === currentTitle) return;
 
     const docRef = doc(db, "templates", id);
-    await setDoc(docRef, {
-      title: newTitle,
-      updatedAt: serverTimestamp(),
-    });
+    await setDoc(
+      docRef,
+      {
+        title: newTitle,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
 
     refreshTemplates();
   }
@@ -64,11 +70,6 @@ export default function Templates() {
     const docRef = doc(db, "templates", id);
     await deleteDoc(docRef);
     refreshTemplates();
-  }
-
-  function reuseTemplate(title) {
-    alert(`Reusing template: ${title}`);
-    // In the future: load this template into a document creation screen
   }
 
   return (
@@ -91,12 +92,12 @@ export default function Templates() {
             >
               <strong>{template.title}</strong>
               <div className="space-x-2">
-                <button
+                <Link
+                  to={`/template/${template.id}`}
                   className="text-blue-600 hover:underline"
-                  onClick={() => reuseTemplate(template.title)}
                 >
                   Reuse
-                </button>
+                </Link>
                 <button
                   className="text-yellow-600 hover:underline"
                   onClick={() => editTemplate(template.id, template.title)}

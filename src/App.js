@@ -1,9 +1,10 @@
-import TemplatePreview from "./TemplatePreview";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Dashboard from "./Dashboard.js";
 import Templates from "./Templates.js";
 import Documents from "./Documents.js";
 import OCRTemplate from "./OCRTemplate.js";
+import TemplatePreview from "./TemplatePreview.js";
 
 export default function App() {
   return (

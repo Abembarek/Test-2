@@ -9,11 +9,12 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function Templates() {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const templatesRef = collection(db, "templates");
 
@@ -72,6 +73,10 @@ export default function Templates() {
     refreshTemplates();
   }
 
+  function reuseTemplate(id) {
+    navigate(`/template/${id}`);
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <h2 className="text-3xl font-bold mb-4">Templates</h2>
@@ -92,12 +97,12 @@ export default function Templates() {
             >
               <strong>{template.title}</strong>
               <div className="space-x-2">
-                <Link
-                  to={`/template/${template.id}`}
+                <button
                   className="text-blue-600 hover:underline"
+                  onClick={() => reuseTemplate(template.id)}
                 >
                   Reuse
-                </Link>
+                </button>
                 <button
                   className="text-yellow-600 hover:underline"
                   onClick={() => editTemplate(template.id, template.title)}

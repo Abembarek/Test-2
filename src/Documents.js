@@ -1,5 +1,6 @@
 import { askAI } from "./AIHelper";
 import React, { useEffect, useState } from "react";
+import jsPDF from "jspdf";
 import {
   collection,
   getDocs,
@@ -29,10 +30,8 @@ export default function Documents() {
     setSummarizingId(id);
     const prompt = `Summarize the document titled "${title}". Be concise. Then suggest 2-3 tags in lowercase like: ["nda", "contract"]`;
     const result = await askAI(prompt);
-
     const tagMatch = result.match(/\[(.*?)\]/);
     const tags = tagMatch ? JSON.parse(tagMatch[0]) : [];
-
     const summaryText = result.split("Then suggest")[0].trim();
 
     const docRef = doc(db, "documents", id);
@@ -45,10 +44,10 @@ export default function Documents() {
 
   async function refreshDocuments() {
     const snapshot = await getDocs(documentsRef);
-    const docs = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const docs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    docs.sort(
+      (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+    );
     setDocuments(docs);
     setLoading(false);
   }
@@ -57,44 +56,42 @@ export default function Documents() {
     const title = prompt("Enter document title:");
     if (!title) return;
 
+    const tagPrompt = `Suggest 2-3 relevant lowercase tags for a document titled "${title}" as an array like: ["nda", "legal"]`;
+    const tagResult = await askAI(tagPrompt);
+    const tagMatch = tagResult.match(/\[(.*?)\]/);
+    const tags = tagMatch ? JSON.parse(tagMatch[0]) : [];
+
     await addDoc(documentsRef, {
       title,
       status: "Awaiting Signature",
       createdAt: serverTimestamp(),
-      tags: [],
+      tags,
     });
 
     refreshDocuments();
   }
 
-  async function toggleSignature(id, currentStatus, title) {
-    const newStatus =
-      currentStatus === "Signed ✓" ? "Awaiting Signature" : "Signed ✓";
+  async function toggleSignature(id, currentStatus) {
+    const nextStatus =
+      currentStatus === "Signed ✓"
+        ? "Reviewed ✅"
+        : currentStatus === "Reviewed ✅"
+        ? "Awaiting Signature"
+        : "Signed ✓";
 
     await updateDoc(doc(db, "documents", id), {
-      status: newStatus,
+      status: nextStatus,
       updatedAt: serverTimestamp(),
     });
 
-    await addDoc(collection(db, "history"), {
-      action: `Document "${title}" marked as ${newStatus}`,
-      timestamp: serverTimestamp(),
-    });
-
     refreshDocuments();
   }
 
-  async function archiveDocument(id, title) {
+  async function archiveDocument(id) {
     const confirmDelete = confirm("Archive this document?");
     if (!confirmDelete) return;
 
     await deleteDoc(doc(db, "documents", id));
-
-    await addDoc(collection(db, "history"), {
-      action: `Document "${title}" was archived.`,
-      timestamp: serverTimestamp(),
-    });
-
     refreshDocuments();
   }
 
@@ -107,6 +104,16 @@ export default function Documents() {
     } catch (error) {
       console.error("Error saving summary:", error);
     }
+  }
+
+  function exportSummariesToPDF() {
+    const doc = new jsPDF();
+    documents.forEach((d, index) => {
+      doc.text(`${index + 1}. ${d.title}`, 10, 10 + index * 20);
+      doc.text(`Summary: ${d.summary || "N/A"}`, 10, 20 + index * 20);
+      if ((index + 1) % 12 === 0) doc.addPage();
+    });
+    doc.save("summaries.pdf");
   }
 
   const filteredDocs = activeTag
@@ -151,6 +158,13 @@ export default function Documents() {
           ))}
         </div>
       )}
+
+      <button
+        onClick={exportSummariesToPDF}
+        className="mb-4 bg-green-600 text-white px-4 py-2 rounded"
+      >
+        📄 Export All Summaries
+      </button>
 
       {loading ? (
         <p>Loading documents...</p>
@@ -232,9 +246,13 @@ export default function Documents() {
                   <br />
                   <button
                     className="text-green-600 hover:underline"
-                    onClick={() => toggleSignature(docItem.id, docItem.status, docItem.title)}
+                    onClick={() => toggleSignature(docItem.id, docItem.status)}
                   >
-                    {docItem.status === "Signed ✓" ? "Unsign" : "Mark Signed"}
+                    {docItem.status === "Signed ✓"
+                      ? "Mark Reviewed"
+                      : docItem.status === "Reviewed ✅"
+                      ? "Unsign"
+                      : "Mark Signed"}
                   </button>
                   <br />
                   <button
@@ -246,7 +264,7 @@ export default function Documents() {
                   <br />
                   <button
                     className="text-red-600 hover:underline"
-                    onClick={() => archiveDocument(docItem.id, docItem.title)}
+                    onClick={() => archiveDocument(docItem.id)}
                   >
                     Archive
                   </button>

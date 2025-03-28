@@ -1,3 +1,4 @@
+import { canEditDocument, canViewDocument } from "./permissions";
 import { askAI } from "./AIHelper";
 import React, { useEffect, useState } from "react";
 import jsPDF from "jspdf";
@@ -45,9 +46,7 @@ export default function Documents() {
   async function refreshDocuments() {
     const snapshot = await getDocs(documentsRef);
     const docs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    docs.sort(
-      (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
-    );
+    docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     setDocuments(docs);
     setLoading(false);
   }
@@ -109,9 +108,10 @@ export default function Documents() {
   function exportSummariesToPDF() {
     const doc = new jsPDF();
     documents.forEach((d, index) => {
-      doc.text(`${index + 1}. ${d.title}`, 10, 10 + index * 20);
-      doc.text(`Summary: ${d.summary || "N/A"}`, 10, 20 + index * 20);
-      if ((index + 1) % 12 === 0) doc.addPage();
+      const y = 20 + (index % 40) * 6;
+      doc.text(`${index + 1}. ${d.title}`, 10, y);
+      if (d.summary) doc.text(`Summary: ${d.summary}`, 10, y + 5);
+      if ((index + 1) % 40 === 0) doc.addPage();
     });
     doc.save("summaries.pdf");
   }
@@ -207,15 +207,17 @@ export default function Documents() {
                     docItem.summary && (
                       <div className="mt-2 text-sm text-gray-700">
                         <strong>Summary:</strong> {docItem.summary}
-                        <button
-                          onClick={() => {
-                            setEditedSummary(docItem.summary);
-                            setEditingId(docItem.id);
-                          }}
-                          className="text-blue-600 text-xs ml-2 underline"
-                        >
-                          Edit
-                        </button>
+                        {canEditDocument(null, docItem) && (
+                          <button
+                            onClick={() => {
+                              setEditedSummary(docItem.summary);
+                              setEditingId(docItem.id);
+                            }}
+                            className="text-blue-600 text-xs ml-2 underline"
+                          >
+                            Edit
+                          </button>
+                        )}
                       </div>
                     )
                   )}

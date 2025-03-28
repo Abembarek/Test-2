@@ -5,15 +5,16 @@
   "keywords": [],
   "main": "src/index.tsx",
   "dependencies": {
+    "ajv": "8.17.1",
+    "axios": "1.8.4",
+    "camtel-design": "1.0.0",
+    "firebase": "^11.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-scripts": "^5.0.0",
     "react-router-dom": "7.4.0",
-    "axios": "1.8.4",
-    "tesseract.js": "6.0.0",
-    "camtel-design": "1.0.0",
-    "ajv": "8.17.1"
-    ,"react-signature-canvas": "^1.0.5"
+    "react-scripts": "^5.0.0",
+    "react-signature-canvas": "^1.0.5",
+    "tesseract.js": "6.0.0"
   },
   "devDependencies": {
     "@types/react": "19.0.0",

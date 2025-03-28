@@ -87,17 +87,21 @@ export default function TemplatePreview() {
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {(template?.fields || []).map((field, idx) => (
-          <div key={idx}>
-            <label className="block font-semibold mb-1">{field}</label>
-            <input
-              type="text"
-              value={formData[field] || ""}
-              onChange={(e) => handleChange(field, e.target.value)}
-              className="w-full border px-3 py-2 rounded"
-            />
-          </div>
-        ))}
+        {(template?.fields || []).map((field, idx) => {
+          const label = typeof field === "string" ? field : field.label;
+          const type = typeof field === "string" ? "text" : field.type || "text";
+          return (
+            <div key={idx}>
+              <label className="block font-semibold mb-1">{label}</label>
+              <input
+                type={type}
+                value={formData[label] || ""}
+                onChange={(e) => handleChange(label, e.target.value)}
+                className="w-full border px-3 py-2 rounded"
+              />
+            </div>
+          );
+        })}
 
         <div className="flex space-x-3 pt-4">
           <button

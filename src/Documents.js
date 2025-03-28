@@ -67,7 +67,7 @@ export default function Documents() {
     refreshDocuments();
   }
 
-  async function toggleSignature(id, currentStatus) {
+  async function toggleSignature(id, currentStatus, title) {
     const newStatus =
       currentStatus === "Signed ✓" ? "Awaiting Signature" : "Signed ✓";
 
@@ -76,14 +76,25 @@ export default function Documents() {
       updatedAt: serverTimestamp(),
     });
 
+    await addDoc(collection(db, "history"), {
+      action: `Document "${title}" marked as ${newStatus}`,
+      timestamp: serverTimestamp(),
+    });
+
     refreshDocuments();
   }
 
-  async function archiveDocument(id) {
+  async function archiveDocument(id, title) {
     const confirmDelete = confirm("Archive this document?");
     if (!confirmDelete) return;
 
     await deleteDoc(doc(db, "documents", id));
+
+    await addDoc(collection(db, "history"), {
+      action: `Document "${title}" was archived.`,
+      timestamp: serverTimestamp(),
+    });
+
     refreshDocuments();
   }
 
@@ -221,7 +232,7 @@ export default function Documents() {
                   <br />
                   <button
                     className="text-green-600 hover:underline"
-                    onClick={() => toggleSignature(docItem.id, docItem.status)}
+                    onClick={() => toggleSignature(docItem.id, docItem.status, docItem.title)}
                   >
                     {docItem.status === "Signed ✓" ? "Unsign" : "Mark Signed"}
                   </button>
@@ -235,7 +246,7 @@ export default function Documents() {
                   <br />
                   <button
                     className="text-red-600 hover:underline"
-                    onClick={() => archiveDocument(docItem.id)}
+                    onClick={() => archiveDocument(docItem.id, docItem.title)}
                   >
                     Archive
                   </button>

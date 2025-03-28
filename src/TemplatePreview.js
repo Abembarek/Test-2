@@ -15,14 +15,27 @@ export default function TemplatePreview() {
   const { id } = useParams();
   const [template, setTemplate] = useState(null);
   const [formData, setFormData] = useState({});
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchTemplate() {
-      const ref = doc(db, "templates", id);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        setTemplate({ id: snap.id, ...snap.data() });
+      try {
+        const ref = doc(db, "templates", id);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (!Array.isArray(data.fields)) {
+            setError("Template fields are missing or not an array.");
+            return;
+          }
+          setTemplate({ id: snap.id, ...data });
+        } else {
+          setError("Template not found.");
+        }
+      } catch (err) {
+        console.error("Error fetching template:", err);
+        setError("Failed to load template.");
       }
     }
     fetchTemplate();
@@ -34,13 +47,18 @@ export default function TemplatePreview() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    await addDoc(collection(db, "documents"), {
-      title: template.title,
-      fields: formData,
-      status: "Awaiting Signature",
-      createdAt: serverTimestamp(),
-    });
-    navigate("/documents");
+    try {
+      await addDoc(collection(db, "documents"), {
+        title: template.title,
+        fields: formData,
+        status: "Awaiting Signature",
+        createdAt: serverTimestamp(),
+      });
+      navigate("/documents");
+    } catch (err) {
+      console.error("Error creating document:", err);
+      setError("Failed to create document.");
+    }
   }
 
   async function handleDownloadPDF() {
@@ -52,6 +70,14 @@ export default function TemplatePreview() {
     const height = (canvas.height * width) / canvas.width;
     pdf.addImage(imgData, "PNG", 0, 0, width, height);
     pdf.save(`${template.title || "document"}.pdf`);
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-xl mx-auto">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
   }
 
   return (

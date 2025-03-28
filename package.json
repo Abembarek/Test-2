@@ -9,14 +9,13 @@
     "axios": "1.8.4",
     "camtel-design": "1.0.0",
     "firebase": "^11.5.0",
+    "jspdf": "^2.5.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "7.4.0",
     "react-scripts": "^5.0.0",
     "react-signature-canvas": "^1.0.5",
     "tesseract.js": "6.0.0"
-    ,"jspdf": "^2.5.1"
-
   },
   "devDependencies": {
     "@types/react": "19.0.0",
